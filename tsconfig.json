@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "esnext",
+    "outDir": "build",
+    "moduleResolution": "node",
+    "lib": ["dom", "es2017", "esnext"],
+    "types": ["node"],
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "removeComments": true,
+    "noImplicitAny": true,
+    "strict": true
+  },
+  "include": ["src"]
+}
