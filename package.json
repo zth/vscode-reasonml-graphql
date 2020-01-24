@@ -1,6 +1,6 @@
 {
   "name": "vscode-reasonml-graphql",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "main": "./build/extension.js",
   "engines": {
     "vscode": "^1.30.0"
@@ -8,20 +8,35 @@
   "scripts": {
     "vscode:prepublish": "yarn build",
     "postinstall": "node ./node_modules/vscode/bin/install",
-    "build": "tsc",
+    "build": "rm -rf build && tsc",
     "build:watch": "tsc -w"
   },
-  "activationEvents": [
-    "onLanguage:reason"
-  ],
-  "license": "MIT",
   "author": "Gabriel Nordeborn <gabbe.nord@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zth/vscode-graphiql-explorer"
+  },
+  "publisher": "GabrielNordeborn",
+  "activationEvents": [
+    "onLanguage:reason",
+    "onCommand:vscode-reasonml-graphql.format-document"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#171E26",
+    "theme": "dark"
+  },
+  "license": "MIT",
   "contributes": {
     "commands": [
       {
         "command": "vscode-reasonml-graphql.format-document",
         "title": "Format GraphQL operations in document",
-        "category": "ReasonML GraphQL"
+        "category": "ReasonML GraphQL",
+        "when": "editorLangId == reason"
       }
     ],
     "languages": [

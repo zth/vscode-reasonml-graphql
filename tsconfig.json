@@ -6,7 +6,7 @@
     "moduleResolution": "node",
     "lib": ["dom", "es2017", "esnext"],
     "types": ["node"],
-    "sourceMap": true,
+    "sourceMap": false,
     "esModuleInterop": true,
     "removeComments": true,
     "noImplicitAny": true,
