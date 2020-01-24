@@ -1,5 +1,15 @@
 import * as path from "path";
-import { workspace, ExtensionContext, window, OutputChannel } from "vscode";
+import {
+  workspace,
+  ExtensionContext,
+  window,
+  OutputChannel,
+  commands,
+  TextEditorEdit,
+  Range,
+  Position
+} from "vscode";
+
 import {
   LanguageClient,
   LanguageClientOptions,
@@ -7,16 +17,88 @@ import {
   TransportKind
 } from "vscode-languageclient";
 
-export async function activate(context: ExtensionContext) {
-  let outputChannel: OutputChannel = window.createOutputChannel(
-    "GraphQL Language Server"
+import { prettify, restoreOperationPadding } from "./extensionUtils";
+import { extractGraphQLSources } from "./findGraphQLSources";
+
+import { GraphQLSource } from "./extensionTypes";
+
+function formatDocument() {
+  const textEditor = window.activeTextEditor;
+
+  if (!textEditor) {
+    window.showErrorMessage("Missing active text editor.");
+    return;
+  }
+
+  const sources = extractGraphQLSources(
+    textEditor.document.languageId,
+    textEditor.document.getText()
   );
 
+  textEditor.edit((editBuilder: TextEditorEdit) => {
+    const textDocument = textEditor.document;
+
+    if (!textDocument) {
+      return;
+    }
+
+    if (sources) {
+      sources.forEach((source: GraphQLSource) => {
+        if (source.type === "TAG" && /^[\s]+$/g.test(source.content)) {
+          window.showInformationMessage("Cannot format an empty code block.");
+          return;
+        }
+        try {
+          const newContent = restoreOperationPadding(
+            prettify(source.content),
+            source.content
+          );
+
+          if (source.type === "TAG") {
+            editBuilder.replace(
+              new Range(
+                new Position(source.start.line, source.start.character),
+                new Position(source.end.line, source.end.character)
+              ),
+              newContent
+            );
+          } else if (source.type === "FULL_DOCUMENT" && textDocument) {
+            editBuilder.replace(
+              new Range(
+                new Position(0, 0),
+                new Position(textDocument.lineCount + 1, 0)
+              ),
+              newContent
+            );
+          }
+        } catch {
+          // Silent
+        }
+      });
+    }
+  });
+}
+
+function initCommands(context: ExtensionContext): void {
+  context.subscriptions.push(
+    commands.registerCommand(
+      "vscode-reasonml-graphql.format-document",
+      formatDocument
+    )
+  );
+}
+
+function initLanguageServer(
+  context: ExtensionContext,
+  outputChannel: OutputChannel
+): void {
   const serverModule = context.asAbsolutePath(path.join("build", "server.js"));
 
+  /*
   const debugOptions = {
     execArgv: ["--nolazy", "--debug=6009", "--inspect=localhost:6009"]
   };
+  */
 
   let serverOptions: ServerOptions = {
     run: {
@@ -42,7 +124,7 @@ export async function activate(context: ExtensionContext) {
   };
 
   const client = new LanguageClient(
-    "vscode-graphql-ls-client",
+    "vscode-reasonml-graphql",
     "GraphQL Language Server",
     serverOptions,
     clientOptions
@@ -50,6 +132,15 @@ export async function activate(context: ExtensionContext) {
 
   const disposableClient = client.start();
   context.subscriptions.push(disposableClient);
+}
+
+export async function activate(context: ExtensionContext) {
+  let outputChannel: OutputChannel = window.createOutputChannel(
+    "GraphQL Language Server"
+  );
+
+  initLanguageServer(context, outputChannel);
+  initCommands(context);
 }
 
 export function deactivate() {

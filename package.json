@@ -17,6 +17,13 @@
   "license": "MIT",
   "author": "Gabriel Nordeborn <gabbe.nord@gmail.com>",
   "contributes": {
+    "commands": [
+      {
+        "command": "vscode-reasonml-graphql.format-document",
+        "title": "Format GraphQL operations in document",
+        "category": "ReasonML GraphQL"
+      }
+    ],
     "languages": [
       {
         "id": "graphql",
@@ -50,13 +57,16 @@
     ]
   },
   "dependencies": {
-    "graphql": "^14.5.8",
     "@gabnor/graphql-language-service-server": "2.4.0-alpha.1",
+    "graphql": "^14.5.8",
+    "locate-character": "^2.0.5",
+    "prettier": "^1.19.1",
     "typescript": "^3.7.3",
     "vscode-languageclient": "^5.2.1"
   },
   "devDependencies": {
     "@types/node": "^12.12.21",
+    "@types/prettier": "^1.19.0",
     "vscode": "^1.1.36"
   }
 }
