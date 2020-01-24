@@ -10,6 +10,14 @@ Supports both `graphql_ppx` and `ReasonRelay`.
 - Autocomplete and validations for your GraphQL operations using the official GraphQL Language Server.
 - Format all GraphQL operations in your Reason file using `prettier`.
 
+## Setup
+
+`vscode-reasonml-graphql` needs your introspected schema, either as a `.json` or a `.graphql` file, through a file called `.graphqlconfig` in your project root.
+
+Make sure you have a `.graphqlconfig` file in your project root containing a `schemaPath` pointing to your schema, like `{ "schemaPath": "/path/to/schema.graphql" }`.
+
+If you don't already have a introspection schema file you can create one by running `npx get-graphql-schema http://url/to/your/graphql/endpoint > schema.graphql` in your project root.
+
 ## Usage
 
 In addition to providing integration with the official GraphQL language server, the extension currently add 1 command:
