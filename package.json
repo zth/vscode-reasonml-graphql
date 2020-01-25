@@ -19,7 +19,7 @@
   },
   "publisher": "GabrielNordeborn",
   "activationEvents": [
-    "onLanguage:reason",
+    "workspaceContains:**/.graphqlconfig",
     "onCommand:vscode-reasonml-graphql.format-document"
   ],
   "categories": [
