@@ -1,7 +1,7 @@
 {
   "name": "vscode-reasonml-graphql",
   "description": "Tighter integration between ReasonML and GraphQL in VSCode.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "main": "./build/extension.js",
   "engines": {
     "vscode": "^1.30.0"
