@@ -30,7 +30,6 @@ In addition to providing integration with the official GraphQL language server, 
 ## WIP/Coming soon
 
 - Specific GraphQL validation rules for `graphql_ppx` and `ReasonRelay` for the language server integration. Read: Validations will include custom directives defined by each framework, and for `ReasonRelay` validation will be provided for most (if not all) special Relay rules in GraphQL.
-- Commands/snippets for inserting new operations into document.
 - Figure out bundling to reduce size.
 
 ## Background, vision and contributing

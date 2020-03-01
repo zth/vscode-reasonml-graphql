@@ -22,11 +22,14 @@ import {
   prettify,
   restoreOperationPadding,
   capitalize,
-  waitFor
+  waitFor,
+  uncapitalize
 } from "./extensionUtils";
 import { extractGraphQLSources } from "./findGraphQLSources";
 
 import { GraphQLSource, ReasonRelayComponentType } from "./extensionTypes";
+import { loadFullSchema } from "./loadSchema";
+import { GraphQLNamedType, GraphQLSchema, GraphQLObjectType } from "graphql";
 
 function formatDocument() {
   const textEditor = window.activeTextEditor;
@@ -85,6 +88,22 @@ function formatDocument() {
   });
 }
 
+async function getValidModuleName(
+  docText: string,
+  name: string
+): Promise<string> {
+  const newName = docText.includes(`module ${name} =`)
+    ? await window.showInputBox({
+        prompt: "Enter module name ('" + name + "' already exists in document)",
+        validateInput: (v: string) =>
+          v !== name ? null : "Name cannot be '" + name + "'.",
+        value: name
+      })
+    : null;
+
+  return newName || name;
+}
+
 async function addReasonRelayComponent(type: ReasonRelayComponentType) {
   const textEditor = window.activeTextEditor;
 
@@ -92,6 +111,8 @@ async function addReasonRelayComponent(type: ReasonRelayComponentType) {
     window.showErrorMessage("Missing active text editor.");
     return;
   }
+
+  const docText = textEditor.document.getText();
 
   let insert = "";
 
@@ -104,24 +125,60 @@ async function addReasonRelayComponent(type: ReasonRelayComponentType) {
   switch (type) {
     case "Fragment": {
       const onType =
-        (await window.showInputBox({
-          placeHolder: "Enter GraphQL type"
-        })) || "_";
+        (await window.showQuickPick(
+          loadFullSchema(workspace.rootPath || "").then(
+            (maybeSchema: GraphQLSchema | null) => {
+              if (maybeSchema) {
+                return Object.values(maybeSchema.getTypeMap()).reduce(
+                  (acc: string[], curr: GraphQLNamedType) => {
+                    if (curr instanceof GraphQLObjectType) {
+                      acc.push(curr.name);
+                    }
 
-      insert += `module Fragment = [%relay.fragment\n  {|\n  fragment ${moduleName}_${onType.toLowerCase()} on ${onType} {\n   __typename # Placeholder value\n    \n  }\n|}\n];`;
+                    return acc;
+                  },
+                  []
+                );
+              }
+
+              return [];
+            }
+          ),
+          {
+            placeHolder: "Select what GraphQL type your fragment is on"
+          }
+        )) || "_";
+
+      const rModuleName = await getValidModuleName(
+        docText,
+        `${onType}Fragment`
+      );
+
+      insert += `module ${rModuleName} = [%relay.fragment\n  {|\n  fragment ${moduleName}_${uncapitalize(
+        rModuleName.replace("Fragment", "")
+      )} on ${onType} {\n   id\n    \n  }\n|}\n];`;
       break;
     }
     case "Query": {
-      insert += `module Query = [%relay.query\n  {|\n  query ${moduleName}Query {\n  __typename # Placeholder value  \n  }\n|}\n];`;
+      insert += `module ${await getValidModuleName(
+        docText,
+        `Query`
+      )} = [%relay.query\n  {|\n  query ${moduleName}Query {\n  __typename # Placeholder value  \n  }\n|}\n];`;
       break;
     }
     case "Mutation": {
-      insert += `module Mutation = [%relay.mutation\n  {|\n  mutation ${moduleName}Mutation {\n  __typename # Placeholder value  \n  }\n|}\n];`;
+      insert += `module ${await getValidModuleName(
+        docText,
+        `Mutation`
+      )} = [%relay.mutation\n  {|\n  mutation ${moduleName}Mutation {\n  __typename # Placeholder value  \n  }\n|}\n];`;
       break;
     }
 
     case "Subscription": {
-      insert += `module Subscription = [%relay.subscription\n  {|\n  subscription ${moduleName}Subscription {\n  __typename # Placeholder value  \n  }\n|}\n];`;
+      insert += `module ${await getValidModuleName(
+        docText,
+        `Subscription`
+      )} = [%relay.subscription\n  {|\n  subscription ${moduleName}Subscription {\n  __typename # Placeholder value  \n  }\n|}\n];`;
       break;
     }
   }
