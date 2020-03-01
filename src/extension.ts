@@ -7,8 +7,7 @@ import {
   commands,
   TextEditorEdit,
   Range,
-  Position,
-  Selection
+  Position
 } from "vscode";
 
 import {
@@ -18,23 +17,12 @@ import {
   TransportKind
 } from "vscode-languageclient";
 
-import {
-  prettify,
-  restoreOperationPadding,
-  capitalize,
-  waitFor,
-  uncapitalize
-} from "./extensionUtils";
+import { prettify, restoreOperationPadding } from "./extensionUtils";
 import { extractGraphQLSources } from "./findGraphQLSources";
 
-import { GraphQLSource, ReasonRelayComponentType } from "./extensionTypes";
-import { loadFullSchema } from "./loadSchema";
-import {
-  GraphQLNamedType,
-  GraphQLSchema,
-  GraphQLObjectType,
-  GraphQLArgument
-} from "graphql";
+import { GraphQLSource } from "./extensionTypes";
+
+import { addReasonRelayComponent } from "./addGraphQLComponent";
 
 function formatDocument() {
   const textEditor = window.activeTextEditor;
@@ -91,190 +79,6 @@ function formatDocument() {
       });
     }
   });
-}
-
-async function getValidModuleName(
-  docText: string,
-  name: string
-): Promise<string> {
-  const newName = docText.includes(`module ${name} =`)
-    ? await window.showInputBox({
-        prompt: "Enter module name ('" + name + "' already exists in document)",
-        validateInput: (v: string) =>
-          v !== name ? null : "Name cannot be '" + name + "'.",
-        value: name
-      })
-    : null;
-
-  return newName || name;
-}
-
-async function addReasonRelayComponent(type: ReasonRelayComponentType) {
-  const textEditor = window.activeTextEditor;
-
-  if (!textEditor) {
-    window.showErrorMessage("Missing active text editor.");
-    return;
-  }
-
-  const docText = textEditor.document.getText();
-
-  let insert = "";
-
-  const moduleName = capitalize(
-    (textEditor.document.fileName.split(/\\|\//).pop() || "")
-      .split(".")
-      .shift() || ""
-  );
-
-  switch (type) {
-    case "Fragment": {
-      const onType =
-        (await window.showQuickPick(
-          loadFullSchema(workspace.rootPath || "").then(
-            (maybeSchema: GraphQLSchema | null) => {
-              if (maybeSchema) {
-                return Object.values(maybeSchema.getTypeMap()).reduce(
-                  (acc: string[], curr: GraphQLNamedType) => {
-                    if (curr instanceof GraphQLObjectType) {
-                      acc.push(curr.name);
-                    }
-
-                    return acc;
-                  },
-                  []
-                );
-              }
-
-              return [];
-            }
-          ),
-          {
-            placeHolder: "Select what GraphQL type your fragment is on"
-          }
-        )) || "_";
-
-      const rModuleName = await getValidModuleName(
-        docText,
-        `${onType}Fragment`
-      );
-
-      insert += `module ${rModuleName} = [%relay.fragment\n  {|\n  fragment ${moduleName}_${uncapitalize(
-        rModuleName.replace("Fragment", "")
-      )} on ${onType} {\n   id\n    \n  }\n|}\n];`;
-      break;
-    }
-    case "Query": {
-      insert += `module ${await getValidModuleName(
-        docText,
-        `Query`
-      )} = [%relay.query\n  {|\n  query ${moduleName}Query {\n  __typename # Placeholder value  \n  }\n|}\n];`;
-      break;
-    }
-    case "Mutation": {
-      const schemaPromise = loadFullSchema(workspace.rootPath || "");
-
-      const mutation =
-        (await window.showQuickPick(
-          schemaPromise.then((maybeSchema: GraphQLSchema | null) => {
-            if (maybeSchema) {
-              const mutationObj = maybeSchema.getMutationType();
-              if (mutationObj) {
-                return Object.keys(mutationObj.getFields());
-              }
-            }
-
-            return [];
-          }),
-          {
-            placeHolder: "Select mutation"
-          }
-        )) || "_";
-
-      const mutationField = await schemaPromise.then(schema => {
-        if (schema) {
-          const mutationObj = schema.getMutationType();
-          if (mutationObj) {
-            return mutationObj.getFields()[mutation] || null;
-          }
-        }
-
-        return null;
-      });
-
-      let mutationArgsDef = "";
-      let mutationArgsMapper = "";
-
-      if (mutationField && mutationField.args.length > 0) {
-        mutationArgsDef += "(";
-        mutationArgsMapper += "(";
-
-        mutationArgsDef += mutationField.args
-          .map((v: GraphQLArgument) => `$${v.name}: ${v.type.toString()}`)
-          .join(", ");
-
-        mutationArgsMapper += mutationField.args
-          .map((v: GraphQLArgument) => `${v.name}: $${v.name}`)
-          .join(", ");
-
-        mutationArgsDef += ")";
-        mutationArgsMapper += ")";
-
-        window.showInformationMessage(
-          mutationField.args.map(v => v.name).join(", ")
-        );
-      }
-
-      insert += `module ${await getValidModuleName(
-        docText,
-        `${capitalize(mutation)}Mutation`
-      )} = [%relay.mutation\n  {|\n  mutation ${moduleName}_${capitalize(
-        mutation
-      )}Mutation${mutationArgsDef} {\n    ${mutation}${mutationArgsMapper}\n  }\n|}\n];`;
-      break;
-    }
-
-    case "Subscription": {
-      insert += `module ${await getValidModuleName(
-        docText,
-        `Subscription`
-      )} = [%relay.subscription\n  {|\n  subscription ${moduleName}Subscription {\n  __typename # Placeholder value  \n  }\n|}\n];`;
-      break;
-    }
-  }
-
-  await textEditor.edit((editBuilder: TextEditorEdit) => {
-    const textDocument = textEditor.document;
-
-    if (!textDocument) {
-      return;
-    }
-
-    editBuilder.insert(textEditor.selection.active, insert);
-  });
-
-  const currentPos = textEditor.selection.active;
-  const newPos = currentPos.with(currentPos.line - 3);
-
-  textEditor.selection = new Selection(newPos, newPos);
-
-  const textDocument = textEditor.document;
-
-  if (!textDocument) {
-    return;
-  }
-
-  await textDocument.save();
-
-  const edited = await commands.executeCommand("vscode-graphiql-explorer.edit");
-
-  if (edited) {
-    await textDocument.save();
-
-    // Wait to let Relay's compiler work
-    await waitFor(500);
-    await textDocument.save();
-  }
 }
 
 function initCommands(context: ExtensionContext): void {
