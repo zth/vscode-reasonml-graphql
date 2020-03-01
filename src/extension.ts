@@ -29,7 +29,12 @@ import { extractGraphQLSources } from "./findGraphQLSources";
 
 import { GraphQLSource, ReasonRelayComponentType } from "./extensionTypes";
 import { loadFullSchema } from "./loadSchema";
-import { GraphQLNamedType, GraphQLSchema, GraphQLObjectType } from "graphql";
+import {
+  GraphQLNamedType,
+  GraphQLSchema,
+  GraphQLObjectType,
+  GraphQLArgument
+} from "graphql";
 
 function formatDocument() {
   const textEditor = window.activeTextEditor;
@@ -167,10 +172,65 @@ async function addReasonRelayComponent(type: ReasonRelayComponentType) {
       break;
     }
     case "Mutation": {
+      const schemaPromise = loadFullSchema(workspace.rootPath || "");
+
+      const mutation =
+        (await window.showQuickPick(
+          schemaPromise.then((maybeSchema: GraphQLSchema | null) => {
+            if (maybeSchema) {
+              const mutationObj = maybeSchema.getMutationType();
+              if (mutationObj) {
+                return Object.keys(mutationObj.getFields());
+              }
+            }
+
+            return [];
+          }),
+          {
+            placeHolder: "Select mutation"
+          }
+        )) || "_";
+
+      const mutationField = await schemaPromise.then(schema => {
+        if (schema) {
+          const mutationObj = schema.getMutationType();
+          if (mutationObj) {
+            return mutationObj.getFields()[mutation] || null;
+          }
+        }
+
+        return null;
+      });
+
+      let mutationArgsDef = "";
+      let mutationArgsMapper = "";
+
+      if (mutationField && mutationField.args.length > 0) {
+        mutationArgsDef += "(";
+        mutationArgsMapper += "(";
+
+        mutationArgsDef += mutationField.args
+          .map((v: GraphQLArgument) => `$${v.name}: ${v.type.toString()}`)
+          .join(", ");
+
+        mutationArgsMapper += mutationField.args
+          .map((v: GraphQLArgument) => `${v.name}: $${v.name}`)
+          .join(", ");
+
+        mutationArgsDef += ")";
+        mutationArgsMapper += ")";
+
+        window.showInformationMessage(
+          mutationField.args.map(v => v.name).join(", ")
+        );
+      }
+
       insert += `module ${await getValidModuleName(
         docText,
-        `Mutation`
-      )} = [%relay.mutation\n  {|\n  mutation ${moduleName}Mutation {\n  __typename # Placeholder value  \n  }\n|}\n];`;
+        `${capitalize(mutation)}Mutation`
+      )} = [%relay.mutation\n  {|\n  mutation ${moduleName}_${capitalize(
+        mutation
+      )}Mutation${mutationArgsDef} {\n    ${mutation}${mutationArgsMapper}\n  }\n|}\n];`;
       break;
     }
 
