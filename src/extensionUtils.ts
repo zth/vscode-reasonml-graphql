@@ -48,3 +48,13 @@ export const restoreOperationPadding = (
     endingWhitespace
   );
 };
+
+export function capitalize(str: string): string {
+  return str.slice(0, 1).toUpperCase() + str.slice(1);
+}
+
+export function waitFor(time: number): Promise<void> {
+  return new Promise(resolve => {
+    setTimeout(resolve, time);
+  });
+}

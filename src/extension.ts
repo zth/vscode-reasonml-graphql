@@ -7,7 +7,8 @@ import {
   commands,
   TextEditorEdit,
   Range,
-  Position
+  Position,
+  Selection
 } from "vscode";
 
 import {
@@ -17,10 +18,15 @@ import {
   TransportKind
 } from "vscode-languageclient";
 
-import { prettify, restoreOperationPadding } from "./extensionUtils";
+import {
+  prettify,
+  restoreOperationPadding,
+  capitalize,
+  waitFor
+} from "./extensionUtils";
 import { extractGraphQLSources } from "./findGraphQLSources";
 
-import { GraphQLSource } from "./extensionTypes";
+import { GraphQLSource, ReasonRelayComponentType } from "./extensionTypes";
 
 function formatDocument() {
   const textEditor = window.activeTextEditor;
@@ -79,11 +85,102 @@ function formatDocument() {
   });
 }
 
+async function addReasonRelayComponent(type: ReasonRelayComponentType) {
+  const textEditor = window.activeTextEditor;
+
+  if (!textEditor) {
+    window.showErrorMessage("Missing active text editor.");
+    return;
+  }
+
+  let insert = "";
+
+  const moduleName = capitalize(
+    (textEditor.document.fileName.split(/\\|\//).pop() || "")
+      .split(".")
+      .shift() || ""
+  );
+
+  switch (type) {
+    case "Fragment": {
+      const onType =
+        (await window.showInputBox({
+          placeHolder: "Enter GraphQL type"
+        })) || "_";
+
+      insert += `module Fragment = [%relay.fragment\n  {|\n  fragment ${moduleName}_${onType.toLowerCase()} on ${onType} {\n   __typename # Placeholder value\n    \n  }\n|}\n];`;
+      break;
+    }
+    case "Query": {
+      insert += `module Query = [%relay.query\n  {|\n  query ${moduleName}Query {\n  __typename # Placeholder value  \n  }\n|}\n];`;
+      break;
+    }
+    case "Mutation": {
+      insert += `module Mutation = [%relay.mutation\n  {|\n  mutation ${moduleName}Mutation {\n  __typename # Placeholder value  \n  }\n|}\n];`;
+      break;
+    }
+
+    case "Subscription": {
+      insert += `module Subscription = [%relay.subscription\n  {|\n  subscription ${moduleName}Subscription {\n  __typename # Placeholder value  \n  }\n|}\n];`;
+      break;
+    }
+  }
+
+  await textEditor.edit((editBuilder: TextEditorEdit) => {
+    const textDocument = textEditor.document;
+
+    if (!textDocument) {
+      return;
+    }
+
+    editBuilder.insert(textEditor.selection.active, insert);
+  });
+
+  const currentPos = textEditor.selection.active;
+  const newPos = currentPos.with(currentPos.line - 3);
+
+  textEditor.selection = new Selection(newPos, newPos);
+
+  const textDocument = textEditor.document;
+
+  if (!textDocument) {
+    return;
+  }
+
+  await textDocument.save();
+
+  const edited = await commands.executeCommand("vscode-graphiql-explorer.edit");
+
+  if (edited) {
+    await textDocument.save();
+
+    // Wait to let Relay's compiler work
+    await waitFor(500);
+    await textDocument.save();
+  }
+}
+
 function initCommands(context: ExtensionContext): void {
   context.subscriptions.push(
     commands.registerCommand(
       "vscode-reasonml-graphql.format-document",
       formatDocument
+    ),
+    commands.registerCommand(
+      "vscode-reasonml-graphql.add-reason-relay-fragment",
+      () => addReasonRelayComponent("Fragment")
+    ),
+    commands.registerCommand(
+      "vscode-reasonml-graphql.add-reason-relay-query",
+      () => addReasonRelayComponent("Query")
+    ),
+    commands.registerCommand(
+      "vscode-reasonml-graphql.add-reason-relay-mutation",
+      () => addReasonRelayComponent("Mutation")
+    ),
+    commands.registerCommand(
+      "vscode-reasonml-graphql.add-reason-relay-subscription",
+      () => addReasonRelayComponent("Subscription")
     )
   );
 }

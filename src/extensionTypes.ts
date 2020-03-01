@@ -29,3 +29,9 @@ export type GraphQLSourceFromTag = {
 export type GraphQLSource =
   | GraphQLSourceFromFullDocument
   | GraphQLSourceFromTag;
+
+export type ReasonRelayComponentType =
+  | "Fragment"
+  | "Query"
+  | "Mutation"
+  | "Subscription";

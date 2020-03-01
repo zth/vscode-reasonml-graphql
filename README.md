@@ -9,8 +9,11 @@ Supports both `graphql_ppx` and `ReasonRelay`.
 - Syntax highlighting for GraphQL in ReasonML.
 - Autocomplete and validations for your GraphQL operations using the official GraphQL Language Server.
 - Format all GraphQL operations in your Reason file using `prettier`.
+- Generate fragments, queries, mutations and subscriptions for ReasonRelay (and edit them in GraphiQL if `vscode-graphiql-explorer` is installed).
 
 ## Setup
+
+> In addition to this extension, you're encouraged to also install `vscode-graphiql-explorer` for the best experience.
 
 `vscode-reasonml-graphql` needs your introspected schema, either as a `.json` or a `.graphql` file, through a file called `.graphqlconfig` in your project root.
 

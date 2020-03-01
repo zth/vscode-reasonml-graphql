@@ -38,6 +38,30 @@
         "title": "Format GraphQL operations in document",
         "category": "ReasonML GraphQL",
         "when": "editorLangId == reason"
+      },
+      {
+        "command": "vscode-reasonml-graphql.add-reason-relay-fragment",
+        "title": "Add ReasonRelay fragment",
+        "category": "ReasonML GraphQL",
+        "when": "editorLangId == reason"
+      },
+      {
+        "command": "vscode-reasonml-graphql.add-reason-relay-query",
+        "title": "Add ReasonRelay query",
+        "category": "ReasonML GraphQL",
+        "when": "editorLangId == reason"
+      },
+      {
+        "command": "vscode-reasonml-graphql.add-reason-relay-mutation",
+        "title": "Add ReasonRelay mutation",
+        "category": "ReasonML GraphQL",
+        "when": "editorLangId == reason"
+      },
+      {
+        "command": "vscode-reasonml-graphql.add-reason-relay-subscription",
+        "title": "Add ReasonRelay subscription",
+        "category": "ReasonML GraphQL",
+        "when": "editorLangId == reason"
       }
     ],
     "languages": [
