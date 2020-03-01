@@ -1,4 +1,4 @@
-import { ReasonRelayComponentType } from "./extensionTypes";
+import { InsertGraphQLComponentType, Framework } from "./extensionTypes";
 
 import { capitalize, uncapitalize, waitFor } from "./extensionUtils";
 
@@ -121,7 +121,10 @@ function makeArgs(
   };
 }
 
-export async function addReasonRelayComponent(type: ReasonRelayComponentType) {
+export async function addGraphQLComponent(
+  framework: Framework,
+  type: InsertGraphQLComponentType
+) {
   const textEditor = window.activeTextEditor;
 
   if (!textEditor) {
@@ -141,6 +144,9 @@ export async function addReasonRelayComponent(type: ReasonRelayComponentType) {
 
   switch (type) {
     case "Fragment": {
+      const ppxNodeName =
+        framework === "ReasonRelay" ? "relay.fragment" : "graphql";
+
       const { result } = quickPickFromSchema("Select type of the fragment", s =>
         Object.values(s.getTypeMap()).reduce(
           (acc: string[], curr: GraphQLNamedType) => {
@@ -161,12 +167,15 @@ export async function addReasonRelayComponent(type: ReasonRelayComponentType) {
         `${onType}Fragment`
       );
 
-      insert += `module ${rModuleName} = [%relay.fragment\n  {|\n  fragment ${moduleName}_${uncapitalize(
+      insert += `module ${rModuleName} = [%${ppxNodeName}\n  {|\n  fragment ${moduleName}_${uncapitalize(
         rModuleName.replace("Fragment", "")
       )} on ${onType} {\n   id\n    \n  }\n|}\n];`;
       break;
     }
     case "Query": {
+      const ppxNodeName =
+        framework === "ReasonRelay" ? "relay.query" : "graphql";
+
       const { schemaPromise, result } = quickPickFromSchema(
         "Select root field",
         s => {
@@ -197,10 +206,13 @@ export async function addReasonRelayComponent(type: ReasonRelayComponentType) {
       insert += `module ${await getValidModuleName(
         docText,
         `Query`
-      )} = [%relay.query\n  {|\n  query ${moduleName}Query${definition} {\n  ${query}${mapper}  \n  }\n|}\n];`;
+      )} = [%${ppxNodeName}\n  {|\n  query ${moduleName}Query${definition} {\n  ${query}${mapper}  \n  }\n|}\n];`;
       break;
     }
     case "Mutation": {
+      const ppxNodeName =
+        framework === "ReasonRelay" ? "relay.mutation" : "graphql";
+
       const { schemaPromise, result } = quickPickFromSchema(
         "Select mutation",
         s => {
@@ -231,13 +243,16 @@ export async function addReasonRelayComponent(type: ReasonRelayComponentType) {
       insert += `module ${await getValidModuleName(
         docText,
         `${capitalize(mutation)}Mutation`
-      )} = [%relay.mutation\n  {|\n  mutation ${moduleName}_${capitalize(
+      )} = [%${ppxNodeName}\n  {|\n  mutation ${moduleName}_${capitalize(
         mutation
       )}Mutation${definition} {\n    ${mutation}${mapper}\n  }\n|}\n];`;
       break;
     }
 
     case "Subscription": {
+      const ppxNodeName =
+        framework === "ReasonRelay" ? "relay.subscription" : "graphql";
+
       const { schemaPromise, result } = quickPickFromSchema(
         "Select subscription",
         s => {
@@ -267,7 +282,7 @@ export async function addReasonRelayComponent(type: ReasonRelayComponentType) {
       insert += `module ${await getValidModuleName(
         docText,
         `Subscription`
-      )} = [%relay.subscription\n  {|\n  subscription ${moduleName}Subscription${definition} {\n  ${subscription}${mapper}  \n  }\n|}\n];`;
+      )} = [%${ppxNodeName}\n  {|\n  subscription ${moduleName}Subscription${definition} {\n  ${subscription}${mapper}  \n  }\n|}\n];`;
       break;
     }
   }

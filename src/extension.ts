@@ -22,7 +22,7 @@ import { extractGraphQLSources } from "./findGraphQLSources";
 
 import { GraphQLSource } from "./extensionTypes";
 
-import { addReasonRelayComponent } from "./addGraphQLComponent";
+import { addGraphQLComponent } from "./addGraphQLComponent";
 
 function formatDocument() {
   const textEditor = window.activeTextEditor;
@@ -89,19 +89,35 @@ function initCommands(context: ExtensionContext): void {
     ),
     commands.registerCommand(
       "vscode-reasonml-graphql.add-reason-relay-fragment",
-      () => addReasonRelayComponent("Fragment")
+      () => addGraphQLComponent("ReasonRelay", "Fragment")
     ),
     commands.registerCommand(
       "vscode-reasonml-graphql.add-reason-relay-query",
-      () => addReasonRelayComponent("Query")
+      () => addGraphQLComponent("ReasonRelay", "Query")
     ),
     commands.registerCommand(
       "vscode-reasonml-graphql.add-reason-relay-mutation",
-      () => addReasonRelayComponent("Mutation")
+      () => addGraphQLComponent("ReasonRelay", "Mutation")
     ),
     commands.registerCommand(
       "vscode-reasonml-graphql.add-reason-relay-subscription",
-      () => addReasonRelayComponent("Subscription")
+      () => addGraphQLComponent("ReasonRelay", "Subscription")
+    ),
+    commands.registerCommand(
+      "vscode-reasonml-graphql.add-graphqlppx-fragment",
+      () => addGraphQLComponent("graphql_ppx", "Fragment")
+    ),
+    commands.registerCommand(
+      "vscode-reasonml-graphql.add-graphqlppx-query",
+      () => addGraphQLComponent("graphql_ppx", "Query")
+    ),
+    commands.registerCommand(
+      "vscode-reasonml-graphql.add-graphqlppx-mutation",
+      () => addGraphQLComponent("graphql_ppx", "Mutation")
+    ),
+    commands.registerCommand(
+      "vscode-reasonml-graphql.add-graphqlppx-subscription",
+      () => addGraphQLComponent("graphql_ppx", "Subscription")
     )
   );
 }

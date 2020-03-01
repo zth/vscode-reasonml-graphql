@@ -62,6 +62,30 @@
         "title": "Add ReasonRelay subscription",
         "category": "ReasonML GraphQL",
         "when": "editorLangId == reason"
+      },
+      {
+        "command": "vscode-reasonml-graphql.add-graphqlppx-fragment",
+        "title": "Add graphql_ppx fragment",
+        "category": "ReasonML GraphQL",
+        "when": "editorLangId == reason"
+      },
+      {
+        "command": "vscode-reasonml-graphql.add-graphqlppx-query",
+        "title": "Add graphql_ppx query",
+        "category": "ReasonML GraphQL",
+        "when": "editorLangId == reason"
+      },
+      {
+        "command": "vscode-reasonml-graphql.add-graphqlppx-mutation",
+        "title": "Add graphql_ppx mutation",
+        "category": "ReasonML GraphQL",
+        "when": "editorLangId == reason"
+      },
+      {
+        "command": "vscode-reasonml-graphql.add-graphqlppx-subscription",
+        "title": "Add graphql_ppx subscription",
+        "category": "ReasonML GraphQL",
+        "when": "editorLangId == reason"
       }
     ],
     "languages": [

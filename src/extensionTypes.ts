@@ -30,8 +30,10 @@ export type GraphQLSource =
   | GraphQLSourceFromFullDocument
   | GraphQLSourceFromTag;
 
-export type ReasonRelayComponentType =
+export type InsertGraphQLComponentType =
   | "Fragment"
   | "Query"
   | "Mutation"
   | "Subscription";
+
+export type Framework = "ReasonRelay" | "graphql_ppx";
