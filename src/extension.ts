@@ -7,14 +7,20 @@ import {
   commands,
   TextEditorEdit,
   Range,
-  Position
+  Position,
+  languages,
+  CompletionItem,
+  Hover,
+  MarkdownString
 } from "vscode";
 
 import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
-  TransportKind
+  TransportKind,
+  CompletionItemKind,
+  HoverRequest
 } from "vscode-languageclient";
 
 import { prettify, restoreOperationPadding } from "./extensionUtils";
@@ -81,7 +87,92 @@ function formatDocument() {
   });
 }
 
-function initCommands(context: ExtensionContext): void {
+function initHoverProviders(client: LanguageClient) {
+  languages.registerHoverProvider("reason", {
+    async provideHover(document, position, token) {
+      const stuff = await client
+        .sendRequest(
+          HoverRequest.type,
+          client.code2ProtocolConverter.asTextDocumentPositionParams(
+            document,
+            position
+          ),
+          token
+        )
+        .then(client.protocol2CodeConverter.asHover, error => {
+          client.logFailedRequest(HoverRequest.type, error);
+          return Promise.resolve(null);
+        });
+
+      return {
+        contents: [stuff]
+      };
+    }
+  });
+
+  languages.registerCompletionItemProvider(
+    "reason",
+    {
+      // @ts-ignore
+      async provideCompletionItems(document, pos, token, context) {
+        const matchingFields = ["someField"];
+
+        const hoverResult: Hover[] | undefined = await commands.executeCommand(
+          "vscode.executeHoverProvider",
+          document.uri,
+          new Position(pos.line, pos.character - 1)
+        );
+
+        if (hoverResult) {
+          // Handle fragments
+          let reasonRelayTypeDefinition: string | null = null;
+
+          for (let i = 0; i <= hoverResult.length - 1; i += 1) {
+            const currentHover = hoverResult[0];
+            const def = currentHover.contents.find(c => {
+              const value = (c as MarkdownString).value;
+
+              window.showInformationMessage(value);
+              window.showInformationMessage(value.split("\n")[0]);
+
+              return value.split("\n")[0].includes(".Operation.");
+            });
+
+            if (def) {
+              reasonRelayTypeDefinition = (def as MarkdownString).value;
+              break;
+            }
+          }
+
+          if (reasonRelayTypeDefinition) {
+            window.showInformationMessage(reasonRelayTypeDefinition);
+          }
+
+          return matchingFields.reduce(
+            (acc: CompletionItem[], curr: string) => {
+              const item = new CompletionItem(
+                `GraphQL: Add '${curr}' to selection`
+              );
+
+              item.insertText = curr;
+              item.kind = CompletionItemKind.Field;
+              item.sortText = "zzzzzzz";
+              acc.push(item);
+
+              return acc;
+            },
+            []
+          );
+        }
+
+        return [];
+      }
+    },
+    "."
+  );
+}
+
+function initCommands(context: ExtensionContext, _: LanguageClient): void {
   context.subscriptions.push(
     commands.registerCommand(
       "vscode-reasonml-graphql.format-document",
@@ -125,7 +216,7 @@ function initCommands(context: ExtensionContext): void {
 function initLanguageServer(
   context: ExtensionContext,
   outputChannel: OutputChannel
-): void {
+): LanguageClient {
   const serverModule = context.asAbsolutePath(path.join("build", "server.js"));
 
   /*
@@ -166,15 +257,18 @@ function initLanguageServer(
 
   const disposableClient = client.start();
   context.subscriptions.push(disposableClient);
+
+  return client;
 }
 
 export async function activate(context: ExtensionContext) {
-  let outputChannel: OutputChannel = window.createOutputChannel(
+  const outputChannel: OutputChannel = window.createOutputChannel(
     "GraphQL Language Server"
   );
 
-  initLanguageServer(context, outputChannel);
-  initCommands(context);
+  const client = initLanguageServer(context, outputChannel);
+  initCommands(context, client);
+  initHoverProviders(client);
 }
 
 export function deactivate() {
